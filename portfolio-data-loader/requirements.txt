@@ -1,0 +1,12 @@
+# Database and core dependencies
+psycopg2-binary>=2.9.9
+python-dotenv>=1.0.0
+
+# Data processing
+pandas>=2.2.1
+openpyxl>=3.1.2
+
+# Web framework (if applicable)
+Flask==3.0.2
+
+gunicorn==21.2.0
