@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Data Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #f4f4f4; }
+        .consensus { font-size: 0.95em; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>Stock Data</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Ticker</th>
+                <th>Company Name</th>
+                <th>Price</th>
+                <th>Price Target</th>
+                <th>Price Target %</th>
+                <th>Buy</th>
+                <th>Sell</th>
+                <th>Hold</th>
+                <th>Sector</th>
+                <th>Market Cap</th>
+                <th>Analyst Consensus</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stocks %}
+            <tr>
+                <td>{{ stock.ticker }}</td>
+                <td>{{ stock.companyName }}</td>
+                <td>{{ stock.price }}</td>
+                <td>{{ stock.priceTarget }}</td>
+                <td>{{ stock.priceTargetPct }}</td>
+                <td>{{ stock.buy }}</td>
+                <td>{{ stock.sell }}</td>
+                <td>{{ stock.hold }}</td>
+                <td>{{ stock.sector }}</td>
+                <td>{{ stock.marketCap }}</td>
+                <td class="consensus">
+                    {% if stock.analystConsensus %}
+                        Consensus: {{ stock.analystConsensus.consensus }}<br>
+                        Buy: {{ stock.analystConsensus.distribution.buy }}<br>
+                        Hold: {{ stock.analystConsensus.distribution.hold }}<br>
+                        Sell: {{ stock.analystConsensus.distribution.sell }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
