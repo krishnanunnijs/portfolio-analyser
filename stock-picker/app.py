@@ -28,11 +28,14 @@ def index():
     with open('quotes.json', 'r', encoding='utf-8') as f:
         quotes = json.load(f)["quotes"]
     with open('stock_data.json', 'r', encoding='utf-8') as f:
-        stock_data = json.load(f)["data"]
+        stock_json = json.load(f)
+        stock_data = stock_json["data"]
+        extra_data = stock_json.get("extraData", [])
 
     # Build lookup dicts for fast access
     quotes_by_ticker = {q["ticker"]: q for q in quotes}
     stock_data_by_ticker = {s["ticker"]: s for s in stock_data}
+    extra_data_by_ticker = {e["ticker"]: e for e in extra_data}
 
     # Parse to stock objects with required attributes
     stocks = []
@@ -40,28 +43,30 @@ def index():
         ticker = s.get('ticker')
         quote = quotes_by_ticker.get(ticker, {})
         stock_info = stock_data_by_ticker.get(ticker, {})
+        extra_info = extra_data_by_ticker.get(ticker, {})
         market_cap = s.get('marketCap')
         formatted_market_cap = format_market_cap(market_cap)
-        price = quote.get('price')
-        price_target = s.get('priceTarget')
-        # Calculate price target as % difference from price
-        price_target_pct = None
-        if price is not None and price_target is not None and price != 0:
-            price_target_pct = ((price_target - price) / price) * 100
+        # Get oneMonthGain and upside from extraData
+        one_month_gain = None
+        upside = None
+        research = extra_info.get('research', {})
+        if research:
+            one_month_gain = research.get('oneMonthGain')
+            upside = research.get('upside')
         stock = {
             'ticker': ticker,
             'companyName': s.get('companyName'),
-            'priceTarget': price_target,
-            'priceTargetPct': f"{price_target_pct:.2f}%" if price_target_pct is not None else "N/A",
+            'priceTarget': s.get('priceTarget'),
             'buy': s.get('buy'),
             'sell': s.get('sell'),
             'hold': s.get('hold'),
             'isin': s.get('isin'),
             'sector': s.get('sector'),
-            'rating': s.get('rating'),
             'marketCap': formatted_market_cap,
-            'price': price,
-            'analystConsensus': stock_info.get('analystConsensus')
+            'price': quote.get('price'),
+            'analystConsensus': stock_info.get('analystConsensus'),
+            'oneMonthGainPct': f"{one_month_gain*100:.2f}%" if one_month_gain is not None else "N/A",
+            'upsidePct': f"{upside*100:.2f}%" if upside is not None else "N/A"
         }
         stocks.append(stock)
     return render_template('index.html', stocks=stocks)

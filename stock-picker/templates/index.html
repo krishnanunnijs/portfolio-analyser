@@ -3,58 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <title>Stock Data Viewer</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <style>
         body { font-family: Arial, sans-serif; margin: 2em; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background: #f4f4f4; }
-        .consensus { font-size: 0.95em; color: #555; }
     </style>
 </head>
 <body>
-    <h1>Stock Data</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Ticker</th>
-                <th>Company Name</th>
-                <th>Price</th>
-                <th>Price Target</th>
-                <th>Price Target %</th>
-                <th>Buy</th>
-                <th>Sell</th>
-                <th>Hold</th>
-                <th>Sector</th>
-                <th>Market Cap</th>
-                <th>Analyst Consensus</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for stock in stocks %}
-            <tr>
-                <td>{{ stock.ticker }}</td>
-                <td>{{ stock.companyName }}</td>
-                <td>{{ stock.price }}</td>
-                <td>{{ stock.priceTarget }}</td>
-                <td>{{ stock.priceTargetPct }}</td>
-                <td>{{ stock.buy }}</td>
-                <td>{{ stock.sell }}</td>
-                <td>{{ stock.hold }}</td>
-                <td>{{ stock.sector }}</td>
-                <td>{{ stock.marketCap }}</td>
-                <td class="consensus">
-                    {% if stock.analystConsensus %}
-                        Consensus: {{ stock.analystConsensus.consensus }}<br>
-                        Buy: {{ stock.analystConsensus.distribution.buy }}<br>
-                        Hold: {{ stock.analystConsensus.distribution.hold }}<br>
-                        Sell: {{ stock.analystConsensus.distribution.sell }}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="container">
+        <h1 class="mt-4 mb-4">Stock Data</h1>
+        <div class="mb-3">
+            <label for="monthFilter" class="form-label">Filter 1 Month %:</label>
+            <select id="monthFilter" class="form-select" style="width:auto;display:inline-block;">
+                <option value="all">All</option>
+                <option value="positive">Positive</option>
+                <option value="negative">Negative</option>
+            </select>
+        </div>
+        <table class="table table-striped table-bordered" id="stockTable">
+            <thead>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Company Name</th>
+                    <th>Price</th>
+                    <th>Price Target</th>
+                    <th>Price Target % (upside)</th>
+                    <th>1 Month %</th>
+                    <th>Buy</th>
+                    <th>Sell</th>
+                    <th>Hold</th>
+                    <th>Sector</th>
+                    <th>Market Cap</th>
+                    <th>Analyst Consensus</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                <tr>
+                    <td>{{ stock.ticker }}</td>
+                    <td>{{ stock.companyName }}</td>
+                    <td>{{ stock.price }}</td>
+                    <td>{{ stock.priceTarget }}</td>
+                    <td>{{ stock.upsidePct }}</td>
+                    <td>{{ stock.oneMonthGainPct }}</td>
+                    <td>{{ stock.buy }}</td>
+                    <td>{{ stock.sell }}</td>
+                    <td>{{ stock.hold }}</td>
+                    <td>{{ stock.sector }}</td>
+                    <td>{{ stock.marketCap }}</td>
+                    <td class="consensus">
+                        {% if stock.analystConsensus %}
+                            Consensus: {{ stock.analystConsensus.consensus }}<br>
+                            Buy: {{ stock.analystConsensus.distribution.buy }}<br>
+                            Hold: {{ stock.analystConsensus.distribution.hold }}<br>
+                            Sell: {{ stock.analystConsensus.distribution.sell }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- jQuery and DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        // Custom sort for Market Cap and Price Target % columns
+        $.fn.dataTable.ext.type.order['market-cap-pre'] = function (data) {
+            if (!data) return 0;
+            let val = data.replace(/[$,]/g, '');
+            if (val.endsWith('T')) return parseFloat(val) * 1e12;
+            if (val.endsWith('B')) return parseFloat(val) * 1e9;
+            if (val.endsWith('M')) return parseFloat(val) * 1e6;
+            return parseFloat(val);
+        };
+        $.fn.dataTable.ext.type.order['percent-pre'] = function (data) {
+            if (!data) return 0;
+            return parseFloat(data.replace(/[%]/g, ''));
+        };
+        $(document).ready(function() {
+            var table = $('#stockTable').DataTable({
+                "order": [],
+                "paging": false,
+                "columnDefs": [
+                    { "type": "percent", "targets": 4 }, // Price Target % (upside)
+                    { "type": "market-cap", "targets": 10 }
+                ]
+            });
+            $('#monthFilter').on('change', function() {
+                var val = $(this).val();
+                table.rows().every(function() {
+                    var data = this.data();
+                    var monthVal = data[5]; // 1 Month % column
+                    var pct = parseFloat(monthVal.replace(/[%]/g, ''));
+                    if (val === 'positive') {
+                        if (pct > 0) {
+                            $(this.node()).show();
+                        } else {
+                            $(this.node()).hide();
+                        }
+                    } else if (val === 'negative') {
+                        if (pct < 0) {
+                            $(this.node()).show();
+                        } else {
+                            $(this.node()).hide();
+                        }
+                    } else {
+                        $(this.node()).show();
+                    }
+                });
+            });
+        });
+    </script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
